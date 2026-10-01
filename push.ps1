@@ -3,7 +3,7 @@ param (
     [string]$CustomMessage = ""
 )
 
-$ErrorActionPreference = "Stop"
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 # 1. Kontrola stavu změn v Gitu
 $status = git status --porcelain
@@ -28,11 +28,25 @@ if ($CustomMessage -ne "") {
 # 4. Vytvoření commitu
 git commit -m "$commitMsg"
 
-# 5. Odeslání do vzdáleného repozitáře
+# 5. Kontrola vzdáleného repozitáře
+$hasRemote = git remote
+if ([string]::IsNullOrWhiteSpace($hasRemote)) {
+    Write-Host "Kód byl lokálně uložen. Pro odeslání na GitHub propojte repozitář příkazem:" -ForegroundColor Cyan
+    Write-Host "   git remote add origin URL_VASHOS_REPOZITARE" -ForegroundColor Gray
+    Write-Host "   git push -u origin main" -ForegroundColor Gray
+    exit 0
+}
+
+# 6. Odeslání do vzdáleného repozitáře
 try {
     git push
-    Write-Host "🚀 Změny byly úspěšně odeslány na GitHub!" -ForegroundColor Green
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "🚀 Změny byly úspěšně odeslány na GitHub!" -ForegroundColor Green
+    } else {
+        Write-Host "❌ Při odesílání změn na GitHub došlo k chybě." -ForegroundColor Red
+        exit 1
+    }
 } catch {
-    Write-Host "❌ Při odesílání změn na GitHub došlo k chybě: $_" -ForegroundColor Red
+    Write-Host "❌ Při odesílání změn na GitHub došlo k chybě." -ForegroundColor Red
     exit 1
 }
