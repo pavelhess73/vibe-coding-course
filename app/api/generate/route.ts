@@ -10,6 +10,8 @@ export interface Place {
   description: string;
   recommendedTimeOfDay: string;
   city: string;
+  spicinessLevel?: number;
+  priceCZK?: number;
   createdAt?: string;
 }
 
@@ -19,11 +21,11 @@ const singlePlaceSchema: Schema = {
   properties: {
     title: {
       type: Type.STRING,
-      description: 'Název aktivity nebo místa.',
+      description: 'Název aktivity nebo místa (minimálně 2 znaky).',
     },
     category: {
       type: Type.STRING,
-      description: 'Kategorie (např. Chrám, Příroda, Kultura, Gastronomie, Trh, Adrenalin).',
+      description: 'Kategorie (Příroda, Kavárny, Kultura, Street Food).',
     },
     description: {
       type: Type.STRING,
@@ -37,8 +39,16 @@ const singlePlaceSchema: Schema = {
       type: Type.STRING,
       description: 'Město, ve kterém se místo nachází.',
     },
+    spicinessLevel: {
+      type: Type.INTEGER,
+      description: 'Úroveň pálivosti od 1 do 5 (1 = nepálivé/sladké/chrámy, 2 = mírné, 3 = středně pálivé, 4 = velmi pálivé, 5 = autentické pálivé street food/jídlo). Výchozí 1.',
+    },
+    priceCZK: {
+      type: Type.INTEGER,
+      description: 'Orientační cena nebo vstupné v Kč (např. 60-150 pro street food/kavárny, 100-250 pro chrámy, 0 pro přírodu).',
+    },
   },
-  required: ['title', 'category', 'description', 'recommendedTimeOfDay', 'city'],
+  required: ['title', 'category', 'description', 'recommendedTimeOfDay', 'city', 'spicinessLevel'],
 };
 
 const CANDIDATE_MODELS = [
@@ -108,6 +118,8 @@ export async function POST(request: Request) {
             description: String(parsed.description || ''),
             recommendedTimeOfDay: String(parsed.recommendedTimeOfDay || 'Dopoledne'),
             city: String(parsed.city || city),
+            spicinessLevel: Math.max(1, Math.min(5, Number(parsed.spicinessLevel) || 1)),
+            priceCZK: typeof parsed.priceCZK === 'number' ? Math.max(0, parsed.priceCZK) : undefined,
           };
           usedModel = modelCandidate;
           break;
