@@ -384,9 +384,8 @@ export default function TravelDiscoveryPage() {
 
     return (
       <span
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${
-          colorClasses[safeLvl] || colorClasses[1]
-        }`}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${colorClasses[safeLvl] || colorClasses[1]
+          }`}
         title={`Úroveň pálivosti: ${safeLvl}/5 (${labels[safeLvl]})`}
       >
         <Flame className="w-3.5 h-3.5 text-rose-400" />
@@ -424,7 +423,7 @@ export default function TravelDiscoveryPage() {
             {/* Main Title */}
             <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white max-w-4xl leading-tight">
               JV Asie{' '}
-              <span className="text-gradient-gold">Travel Discovery</span>
+              <span className="text-gradient-gold">Travel Discovery v. 2.0</span>
             </h1>
 
             {/* Subtitle */}
@@ -569,11 +568,10 @@ export default function TravelDiscoveryPage() {
                     <button
                       key={cat.id}
                       onClick={() => setSelectedCategory(cat.id)}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border cursor-pointer ${
-                        isActive
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border cursor-pointer ${isActive
                           ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/25 scale-[1.02]'
                           : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:border-slate-700 hover:bg-slate-800/80 hover:text-white'
-                      }`}
+                        }`}
                     >
                       <Icon className={`w-4 h-4 ${isActive ? 'text-slate-950' : 'text-amber-400'}`} />
                       <span>{cat.label}</span>
@@ -595,21 +593,19 @@ export default function TravelDiscoveryPage() {
                 <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800 self-start sm:self-auto">
                   <button
                     onClick={() => setSpicinessFilterMode('exact')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${
-                      spicinessFilterMode === 'exact'
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${spicinessFilterMode === 'exact'
                         ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                         : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                      }`}
                   >
                     Přesná úroveň (=)
                   </button>
                   <button
                     onClick={() => setSpicinessFilterMode('max')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${
-                      spicinessFilterMode === 'max'
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${spicinessFilterMode === 'max'
                         ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                         : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                      }`}
                   >
                     Do úrovně (max ≤)
                   </button>
@@ -620,11 +616,10 @@ export default function TravelDiscoveryPage() {
               <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
                 <button
                   onClick={() => setSelectedSpiciness('all')}
-                  className={`px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border text-center cursor-pointer ${
-                    selectedSpiciness === 'all'
+                  className={`px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border text-center cursor-pointer ${selectedSpiciness === 'all'
                       ? 'bg-slate-700 text-white border-slate-500 shadow-md'
                       : 'bg-slate-900/70 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-slate-200'
-                  }`}
+                    }`}
                 >
                   Všechny pálivosti
                 </button>
@@ -635,15 +630,14 @@ export default function TravelDiscoveryPage() {
                     <button
                       key={level}
                       onClick={() => setSelectedSpiciness(level)}
-                      className={`flex flex-col items-center justify-center p-2 rounded-xl text-xs font-semibold transition-all border cursor-pointer ${
-                        isActive
+                      className={`flex flex-col items-center justify-center p-2 rounded-xl text-xs font-semibold transition-all border cursor-pointer ${isActive
                           ? level === 5
                             ? 'bg-rose-950/80 border-rose-500 text-rose-200 shadow-lg shadow-rose-950/60 scale-[1.02]'
                             : level >= 3
-                            ? 'bg-orange-950/80 border-orange-500 text-orange-200 shadow-lg shadow-orange-950/60 scale-[1.02]'
-                            : 'bg-amber-950/80 border-amber-500 text-amber-200 shadow-lg shadow-amber-950/60 scale-[1.02]'
+                              ? 'bg-orange-950/80 border-orange-500 text-orange-200 shadow-lg shadow-orange-950/60 scale-[1.02]'
+                              : 'bg-amber-950/80 border-amber-500 text-amber-200 shadow-lg shadow-amber-950/60 scale-[1.02]'
                           : 'bg-slate-900/70 text-slate-300 border-slate-800 hover:bg-slate-800/80 hover:border-slate-700'
-                      }`}
+                        }`}
                     >
                       <span className="text-xs">{chilis}</span>
                       <span className="text-[10px] opacity-80 mt-0.5 font-normal">
@@ -662,8 +656,8 @@ export default function TravelDiscoveryPage() {
                     {selectedSpiciness === 'all'
                       ? 'Posuňte pro filtr pálivosti'
                       : spicinessFilterMode === 'exact'
-                      ? `Vybrána přesně úroveň: ${selectedSpiciness} 🌶️`
-                      : `Filtrováno do úrovně: ${selectedSpiciness} 🌶️`}
+                        ? `Vybrána přesně úroveň: ${selectedSpiciness} 🌶️`
+                        : `Filtrováno do úrovně: ${selectedSpiciness} 🌶️`}
                   </span>
                   <span className="text-rose-400">Extra pálivé (5 🌶️🔥)</span>
                 </div>
@@ -694,13 +688,12 @@ export default function TravelDiscoveryPage() {
         {/* NOTIFICATION BANNER */}
         {notification && (
           <div
-            className={`p-4 rounded-xl border flex items-center justify-between text-sm transition-all duration-300 ${
-              notification.type === 'success'
+            className={`p-4 rounded-xl border flex items-center justify-between text-sm transition-all duration-300 ${notification.type === 'success'
                 ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-200 shadow-lg shadow-emerald-950/50'
                 : notification.type === 'info'
-                ? 'bg-amber-950/80 border-amber-500/40 text-amber-200 shadow-lg shadow-amber-950/50'
-                : 'bg-rose-950/80 border-rose-500/40 text-rose-200 shadow-lg shadow-rose-950/50'
-            }`}
+                  ? 'bg-amber-950/80 border-amber-500/40 text-amber-200 shadow-lg shadow-amber-950/50'
+                  : 'bg-rose-950/80 border-rose-500/40 text-rose-200 shadow-lg shadow-rose-950/50'
+              }`}
           >
             <div className="flex items-center gap-3">
               {notification.type === 'info' && <Loader2 className="w-5 h-5 animate-spin text-amber-400 shrink-0" />}
@@ -734,11 +727,10 @@ export default function TravelDiscoveryPage() {
                         setSelectedCity(city.id);
                         setSelectedCategory('all');
                       }}
-                      className={`flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl font-bold text-sm sm:text-base transition-all duration-300 relative overflow-hidden cursor-pointer ${
-                        isActive
+                      className={`flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl font-bold text-sm sm:text-base transition-all duration-300 relative overflow-hidden cursor-pointer ${isActive
                           ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 shadow-lg shadow-amber-500/25 scale-[1.02]'
                           : 'bg-slate-900/90 text-slate-300 border border-slate-800 hover:border-slate-700 hover:bg-slate-800/80'
-                      }`}
+                        }`}
                     >
                       <span className="text-lg">{city.flag}</span>
                       <span>{city.name}</span>
