@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { z } from 'zod';
 import { db } from '../lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+
+const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
 import {
   Compass,
   MapPin,
@@ -33,6 +36,8 @@ import {
   SlidersHorizontal,
   Filter,
   RotateCcw,
+  List,
+  Map as MapIcon,
 } from 'lucide-react';
 
 /**
@@ -60,6 +65,8 @@ export const PlaceSchema = z.object({
     .nullish()
     .transform((val) => val ?? undefined)
     .optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
   createdAt: z.string().optional(),
 });
 
@@ -112,6 +119,7 @@ export default function TravelDiscoveryPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSpiciness, setSelectedSpiciness] = useState<'all' | number>('all');
   const [spicinessFilterMode, setSpicinessFilterMode] = useState<'exact' | 'max'>('exact');
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   // Data a UI stavy
   const [places, setPlaces] = useState<Place[]>([]);
@@ -824,20 +832,52 @@ export default function TravelDiscoveryPage() {
             </div>
           </div>
         ) : (
-          /* 4. SEZNAM KARET (GRID UI) */
+          /* 4. SEZNAM NEBO MAPA */
           <section className="space-y-6">
-            <div className="flex items-center justify-between text-xs text-slate-400 font-medium uppercase tracking-wider px-1">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-slate-400 font-medium uppercase tracking-wider px-1">
               <span>
                 Zobrazeno {filteredPlaces.length} ze {places.length} doporučení
                 {isAnyFilterActive && ' (filtrováno)'}
               </span>
-              <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Live Firestore Connection
-              </span>
+              
+              <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
+                {/* Zobrazení mapy / seznamu přepínač */}
+                <div className="flex bg-slate-900/80 p-1 rounded-lg border border-slate-700/50">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                      viewMode === 'list'
+                        ? 'bg-slate-700 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <List className="w-3.5 h-3.5" />
+                    <span>📋 Seznam</span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('map')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                      viewMode === 'map'
+                        ? 'bg-slate-700 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <MapIcon className="w-3.5 h-3.5" />
+                    <span>🗺️ Mapa</span>
+                  </button>
+                </div>
+                
+                <span className="flex items-center gap-1.5 text-emerald-400 font-semibold shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Live Firestore Connection
+                </span>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {viewMode === 'map' ? (
+              <MapView places={filteredPlaces} city={selectedCity} />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredPlaces.map((place) => (
                 <article
                   key={place.id || place.title}
@@ -909,6 +949,7 @@ export default function TravelDiscoveryPage() {
                 </article>
               ))}
             </div>
+            )}
           </section>
         )}
       </main>

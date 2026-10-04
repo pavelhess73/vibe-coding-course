@@ -12,6 +12,8 @@ export interface Place {
   city: string;
   spicinessLevel?: number;
   priceCZK?: number;
+  lat?: number;
+  lng?: number;
   createdAt?: string;
 }
 
@@ -47,8 +49,16 @@ const singlePlaceSchema: Schema = {
       type: Type.INTEGER,
       description: 'Orientační cena nebo vstupné v Kč (např. 60-150 pro street food/kavárny, 100-250 pro chrámy, 0 pro přírodu).',
     },
+    lat: {
+      type: Type.NUMBER,
+      description: 'Zeměpisná šířka (např. 19.88 pro Luang Prabang, 13.75 pro Bangkok).',
+    },
+    lng: {
+      type: Type.NUMBER,
+      description: 'Zeměpisná délka (např. 102.13 pro Luang Prabang, 100.50 pro Bangkok).',
+    },
   },
-  required: ['title', 'category', 'description', 'recommendedTimeOfDay', 'city', 'spicinessLevel'],
+  required: ['title', 'category', 'description', 'recommendedTimeOfDay', 'city', 'spicinessLevel', 'lat', 'lng'],
 };
 
 const CANDIDATE_MODELS = [
@@ -120,6 +130,8 @@ export async function POST(request: Request) {
             city: String(parsed.city || city),
             spicinessLevel: Math.max(1, Math.min(5, Number(parsed.spicinessLevel) || 1)),
             priceCZK: typeof parsed.priceCZK === 'number' ? Math.max(0, parsed.priceCZK) : undefined,
+            lat: typeof parsed.lat === 'number' ? parsed.lat : undefined,
+            lng: typeof parsed.lng === 'number' ? parsed.lng : undefined,
           };
           usedModel = modelCandidate;
           break;
