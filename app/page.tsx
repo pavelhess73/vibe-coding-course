@@ -89,6 +89,30 @@ const CITIES = [
     tagline: 'Fascinující metropole zlatých paláců, nočních trhů a street foodu',
     image: 'https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&w=800&q=80',
   },
+  {
+    id: 'Hanoi',
+    name: 'Hanoj',
+    country: 'Vietnam',
+    flag: '🇻🇳',
+    tagline: 'Starobylé město tisícileté kultury a vynikajícího Pho',
+    image: 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 'Saigon',
+    name: 'Saigon (HCMC)',
+    country: 'Vietnam',
+    flag: '🇻🇳',
+    tagline: 'Dynamické srdce Vietnamu s nezapomenutelnou kávou',
+    image: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 'Pattaya',
+    name: 'Pattaya',
+    country: 'Thajsko',
+    flag: '🇹🇭',
+    tagline: 'Přímořské letovisko plné pláží a nočního života',
+    image: 'https://images.unsplash.com/photo-1583279148560-6c71c4c11b0e?auto=format&fit=crop&w=800&q=80',
+  },
 ];
 
 /**
@@ -403,7 +427,13 @@ export default function TravelDiscoveryPage() {
     );
   };
 
-  const activeCityInfo = CITIES.find((c) => c.id === selectedCity) || CITIES[0];
+  const activeCityInfo = CITIES.find((c) => c.id === selectedCity) || {
+    id: selectedCity,
+    name: selectedCity,
+    country: 'JV Asie',
+    flag: '🌏',
+    tagline: 'Vlastní destinace objevená přes AI',
+  };
   const isAnyFilterActive =
     searchQuery.trim() !== '' || selectedCategory !== 'all' || selectedSpiciness !== 'all';
 
@@ -725,26 +755,43 @@ export default function TravelDiscoveryPage() {
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 self-start sm:self-center mr-1">
                 Vyberte destinaci:
               </span>
-              <div className="grid grid-cols-2 gap-2.5 w-full sm:w-auto">
-                {CITIES.map((city) => {
-                  const isActive = selectedCity === city.id;
-                  return (
-                    <button
-                      key={city.id}
-                      onClick={() => {
-                        setSelectedCity(city.id);
+              <div className="flex flex-col gap-3 w-full sm:w-auto">
+                <div className="flex flex-wrap gap-2.5">
+                  {CITIES.map((city) => {
+                    const isActive = selectedCity === city.id;
+                    return (
+                      <button
+                        key={city.id}
+                        onClick={() => {
+                          setSelectedCity(city.id);
+                          setSelectedCategory('all');
+                        }}
+                        className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 relative overflow-hidden cursor-pointer ${isActive
+                            ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 shadow-lg shadow-amber-500/25 scale-[1.02]'
+                            : 'bg-slate-900/90 text-slate-300 border border-slate-800 hover:border-slate-700 hover:bg-slate-800/80'
+                          }`}
+                      >
+                        <span className="text-base">{city.flag}</span>
+                        <span>{city.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Custom City Input */}
+                <div className="relative w-full max-w-sm mt-1">
+                  <input
+                    type="text"
+                    placeholder="Jiné město (např. Phuket, Da Nang)..."
+                    className="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 transition-all"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                        setSelectedCity(e.currentTarget.value.trim());
                         setSelectedCategory('all');
-                      }}
-                      className={`flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl font-bold text-sm sm:text-base transition-all duration-300 relative overflow-hidden cursor-pointer ${isActive
-                          ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 shadow-lg shadow-amber-500/25 scale-[1.02]'
-                          : 'bg-slate-900/90 text-slate-300 border border-slate-800 hover:border-slate-700 hover:bg-slate-800/80'
-                        }`}
-                    >
-                      <span className="text-lg">{city.flag}</span>
-                      <span>{city.name}</span>
-                    </button>
-                  );
-                })}
+                      }
+                    }}
+                  />
+                  <Search className="w-4 h-4 text-slate-500 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
             </div>
 

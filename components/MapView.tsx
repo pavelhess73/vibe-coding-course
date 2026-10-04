@@ -29,7 +29,24 @@ interface MapViewProps {
 
 export default function MapView({ places, city }: MapViewProps) {
   // Středy měst
-  const center: [number, number] = city === 'Bangkok' ? [13.7563, 100.5018] : [19.8856, 102.1347];
+  const CITY_COORDS: Record<string, [number, number]> = {
+    'Luang Prabang': [19.8856, 102.1347],
+    'Bangkok': [13.7563, 100.5018],
+    'Hanoi': [21.0285, 105.8542],
+    'Hanoj': [21.0285, 105.8542],
+    'Saigon': [10.8231, 106.6297],
+    'Saigon (HCMC)': [10.8231, 106.6297],
+    'Pattaya': [12.9236, 100.8825],
+  };
+
+  const center: [number, number] = useMemo(() => {
+    if (CITY_COORDS[city]) return CITY_COORDS[city];
+    // Pokus o nalezení prvního místa s existujícími souřadnicemi
+    const firstPlace = places.find(p => p.lat !== undefined && p.lng !== undefined);
+    if (firstPlace) return [firstPlace.lat!, firstPlace.lng!];
+    // Fallback: přibližný střed JV Asie
+    return [15.8700, 100.9925];
+  }, [city, places]);
 
   // Generování deterministických souřadnic pro místa, která je nemají
   const placesWithCoords = useMemo(() => {
