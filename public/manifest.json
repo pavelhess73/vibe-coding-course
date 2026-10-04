@@ -1,0 +1,27 @@
+{
+  "name": "JV Asie Travel Discovery",
+  "short_name": "AsiaTravel",
+  "description": "Objevujte nejkrásnější chrámy, přírodu, kavárny a street food v jihovýchodní Asii. Offline přístup pro cestování bez internetu.",
+  "theme_color": "#0f172a",
+  "background_color": "#020617",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "start_url": "/",
+  "lang": "cs",
+  "categories": ["travel", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

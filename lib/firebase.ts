@@ -1,5 +1,10 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  getFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,4 +17,33 @@ const firebaseConfig = {
 
 // Inicializace Firebase (zabránění opakované inicializaci v Next.js HMR)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-export const db = getFirestore(app);
+
+/**
+ * Firestore s offline persistencí:
+ * - persistentLocalCache() zapne IndexedDB cache, která ukládá data lokálně
+ * - persistentMultipleTabManager() umožňuje sdílet cache přes více záložek
+ * - Pokud je Firestore již inicializováno (HMR), použijeme getFirestore()
+ * - Tato konfigurace způsobí, že místa zůstanou dostupná i bez internetu
+ */
+export const db = (() => {
+  // Pokud je aplikace na serveru (SSR), offline cache není k dispozici
+  if (typeof window === 'undefined') {
+    return getFirestore(app);
+  }
+
+  try {
+    // Klientská strana: inicializujeme s persistentní IndexedDB cache
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  } catch (err: unknown) {
+    // Pokud je Firestore již inicializováno (Fast Refresh / HMR), vrátíme existující instanci
+    if (err instanceof Error && err.name === 'FirebaseError' && err.message.includes('already been started')) {
+      console.warn('[Firebase] Firestore již inicializováno, používám existující instanci.');
+      return getFirestore(app);
+    }
+    throw err;
+  }
+})();

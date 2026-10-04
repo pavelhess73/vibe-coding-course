@@ -1,9 +1,28 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'JV Asie Travel Discovery | Luang Prabang & Bangkok',
-  description: 'Objevujte nejkrásnější místa a autentické zážitky v jihovýchodní Asii napájené AI a Firestore.',
+  description: 'Objevujte nejkrásnější místa a autentické zážitky v jihovýchodní Asii napájené AI a Firestore. Funguje offline.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'AsiaTravel',
+  },
+  icons: {
+    icon: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+    ],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0f172a',
 };
 
 export default function RootLayout({
@@ -17,7 +36,7 @@ export default function RootLayout({
         {/* Decorative glowing background gradients */}
         <div className="fixed top-0 left-1/4 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none animate-glow" />
         <div className="fixed bottom-0 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none animate-glow" />
-        
+
         {children}
       </body>
     </html>

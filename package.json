@@ -13,6 +13,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@google/genai": "^2.24.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^26.6.3",
