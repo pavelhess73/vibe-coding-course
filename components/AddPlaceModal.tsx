@@ -50,27 +50,7 @@ export interface EnrichmentResult {
   lng?: number;
 }
 
-/**
- * Pomocná funkce pro AI enrichment přes Gemini API
- */
-export async function enrichPlaceWithGemini(
-  title: string,
-  city: string,
-  rawNote: string
-): Promise<EnrichmentResult> {
-  const response = await fetch('/api/enrich', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, city, rawNote }),
-  });
-
-  const data = await response.json();
-  if (!response.ok || data.error) {
-    throw new Error(data.error || 'AI enrichment selhal');
-  }
-
-  return data.enrichment;
-}
+import { enrichCustomPlaceAction } from '../app/actions/generatePlace';
 
 const DEFAULT_CITIES = [
   'Luang Prabang',
@@ -84,7 +64,7 @@ interface AddPlaceModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultCity?: string;
-  onSuccess?: (title: string, isEnriched: boolean) => void;
+  onSuccess?: (title: string, isEnriched: boolean, rateLimitWarning?: boolean) => void;
 }
 
 export default function AddPlaceModal({
@@ -164,14 +144,27 @@ export default function AddPlaceModal({
 
     let enriched: EnrichmentResult | null = null;
     let enrichedSuccess = false;
+    let rateLimited = false;
 
-    // 2. AI ENRICHMENT (pokud jsme online)
+    // 2. AI ENRICHMENT PŘES SERVER ACTION (pokud jsme online)
     if (isOnline) {
       try {
-        enriched = await enrichPlaceWithGemini(validData.title, validData.city, validData.rawNote);
-        enrichedSuccess = true;
-      } catch (err) {
-        console.warn('⚠️ Gemini AI enrichment selhal, ukládám neobohacený tip:', err);
+        const result = await enrichCustomPlaceAction({
+          title: validData.title,
+          city: validData.city,
+          rawNote: validData.rawNote,
+        });
+
+        if (result.success && result.enrichment) {
+          enriched = result.enrichment;
+          enrichedSuccess = true;
+        }
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        if (errMsg.includes('limit AI') || errMsg.includes('5/10 min')) {
+          rateLimited = true;
+        }
+        console.warn('⚠️ Gemini AI enrichment selhal, ukládám neobohacený tip:', errMsg);
       }
     }
 
@@ -195,7 +188,7 @@ export default function AddPlaceModal({
 
       setSubmitting(false);
       if (onSuccess) {
-        onSuccess(validData.title, enrichedSuccess);
+        onSuccess(validData.title, enrichedSuccess, rateLimited);
       }
       onClose();
     } catch (err: unknown) {

@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 
 import AddPlaceModal from '../components/AddPlaceModal';
+import { generateAIPlaceAction } from './actions/generatePlace';
 
 /**
  * 1. ZOD SCHÉMA: PlaceSchema
@@ -326,7 +327,7 @@ export default function TravelDiscoveryPage() {
     });
   }, [places, searchQuery, selectedCategory, selectedSpiciness, spicinessFilterMode]);
 
-  // Vygenerování nového AI doporučení přes /api/generate
+  // Vygenerování nového AI doporučení přes Server Action generateAIPlaceAction
   const handleAddAIPlace = async (requestedCategory?: string) => {
     try {
       setGenerating(true);
@@ -338,27 +339,24 @@ export default function TravelDiscoveryPage() {
         type: 'info',
       });
 
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ city: selectedCity, category: targetCat }),
-      });
+      const result = await generateAIPlaceAction({ city: selectedCity, category: targetCat });
 
-      const data = await response.json();
-
-      if (!response.ok || data.error) {
-        throw new Error(data.error || 'Generování selhalo.');
+      if (!result.success || !result.place) {
+        throw new Error('Generování selhalo.');
       }
 
       setNotification({
-        message: `✨ Uloženo! Model ${data.modelUsed} vytvořil místo "${data.place.title}" ve Firestore!`,
+        message: `✨ Uloženo! Model ${result.modelUsed} vytvořil místo "${result.place.title}" ve Firestore!`,
         type: 'success',
       });
       setCustomCategoryInput('');
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Neznámá chyba.';
+      const isRateLimit = errMsg.includes('limit AI') || errMsg.includes('5/10 min');
       setNotification({
-        message: `❌ Generování selhalo: ${errMsg}`,
+        message: isRateLimit
+          ? '⚠️ Překročen limit AI generování (max 5/10 min). Zkuste to prosím za chvíli.'
+          : `❌ Generování selhalo: ${errMsg}`,
         type: 'error',
       });
     } finally {
@@ -1131,13 +1129,20 @@ export default function TravelDiscoveryPage() {
         isOpen={showCustomTipModal}
         onClose={() => setShowCustomTipModal(false)}
         defaultCity={selectedCity}
-        onSuccess={(title, isEnriched) => {
-          setNotification({
-            message: isEnriched
-              ? `✨ Váš tip "${title}" byl úspěšně obohacen přes Gemini AI a uložen do Firestore!`
-              : `📱 Váš tip "${title}" byl uložen v offline režimu (bez AI enrichmentu) do Firestore.`,
-            type: 'success',
-          });
+        onSuccess={(title, isEnriched, rateLimitWarning) => {
+          if (rateLimitWarning) {
+            setNotification({
+              message: '⚠️ Překročen limit AI generování (max 5/10 min). Zkuste to prosím za chvíli.',
+              type: 'error',
+            });
+          } else {
+            setNotification({
+              message: isEnriched
+                ? `✨ Váš tip "${title}" byl úspěšně obohacen přes Gemini AI a uložen do Firestore!`
+                : `📱 Váš tip "${title}" byl uložen do Firestore (bez AI enrichmentu).`,
+              type: 'success',
+            });
+          }
         }}
       />
     </div>

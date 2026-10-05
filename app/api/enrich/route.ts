@@ -50,8 +50,22 @@ const CANDIDATE_MODELS = [
   'gemini-flash-latest',
 ];
 
+import { checkRateLimit } from '../../../lib/rateLimit';
+
 export async function POST(request: Request) {
   try {
+    const forwarded = request.headers.get('x-forwarded-for');
+    const clientIp = forwarded ? forwarded.split(',')[0].trim() : request.headers.get('x-real-ip') || '127.0.0.1';
+
+    // 1. RATE LIMITING TEST
+    const rateLimitResult = checkRateLimit(clientIp);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: '⚠️ Překročen limit AI generování (max 5/10 min). Zkuste to prosím za chvíli.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { title, city, rawNote } = body;
 
