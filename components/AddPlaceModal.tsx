@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { db } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import { savePendingPlace } from '../lib/offlineStore';
 import {
   X,
   Sparkles,
@@ -16,6 +17,7 @@ import {
   AlertTriangle,
   PlusCircle,
   CheckCircle2,
+  Clock,
 } from 'lucide-react';
 
 /**
@@ -64,7 +66,7 @@ interface AddPlaceModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultCity?: string;
-  onSuccess?: (title: string, isEnriched: boolean, rateLimitWarning?: boolean) => void;
+  onSuccess?: (title: string, isEnriched: boolean, rateLimitWarning?: boolean, offlineQueued?: boolean) => void;
 }
 
 export default function AddPlaceModal({
@@ -142,30 +144,49 @@ export default function AddPlaceModal({
     const validData = parseResult.data;
     setSubmitting(true);
 
-    let enriched: EnrichmentResult | null = null;
-    let enrichedSuccess = false;
-    let rateLimited = false;
-
-    // 2. AI ENRICHMENT PŘES SERVER ACTION (pokud jsme online)
-    if (isOnline) {
+    // 2a. OFFLINE CESTA: uložit do IndexedDB offline fronty
+    if (!isOnline) {
       try {
-        const result = await enrichCustomPlaceAction({
+        await savePendingPlace({
           title: validData.title,
           city: validData.city,
           rawNote: validData.rawNote,
         });
-
-        if (result.success && result.enrichment) {
-          enriched = result.enrichment;
-          enrichedSuccess = true;
+        setSubmitting(false);
+        if (onSuccess) {
+          onSuccess(validData.title, false, false, true /* offlineQueued */);
         }
+        onClose();
       } catch (err: unknown) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        if (errMsg.includes('limit AI') || errMsg.includes('5/10 min')) {
-          rateLimited = true;
-        }
-        console.warn('⚠️ Gemini AI enrichment selhal, ukládám neobohacený tip:', errMsg);
+        console.error('Chyba při ukládání do IndexedDB:', err);
+        setErrors({ title: 'Chyba při lokálním uložení do offline fronty.' });
+        setSubmitting(false);
       }
+      return;
+    }
+
+    let enriched: EnrichmentResult | null = null;
+    let enrichedSuccess = false;
+    let rateLimited = false;
+
+    // 2b. ONLINE CESTA: AI ENRICHMENT PŘES SERVER ACTION
+    try {
+      const result = await enrichCustomPlaceAction({
+        title: validData.title,
+        city: validData.city,
+        rawNote: validData.rawNote,
+      });
+
+      if (result.success && result.enrichment) {
+        enriched = result.enrichment;
+        enrichedSuccess = true;
+      }
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.includes('limit AI') || errMsg.includes('5/10 min')) {
+        rateLimited = true;
+      }
+      console.warn('⚠️ Gemini AI enrichment selhal, ukládám neobohacený tip:', errMsg);
     }
 
     // 3. SESTAVENÍ VÝSLEDNÉHO OBJEKTU PRO FIRESTORE
@@ -182,13 +203,13 @@ export default function AddPlaceModal({
     };
 
     try {
-      // 4. ULOŽENÍ DO FIRESTORE (funguje i offline díky IndexedDB cache)
+      // 4. ULOŽENÍ DO FIRESTORE
       const placesRef = collection(db, 'places');
       await addDoc(placesRef, placeDoc);
 
       setSubmitting(false);
       if (onSuccess) {
-        onSuccess(validData.title, enrichedSuccess, rateLimited);
+        onSuccess(validData.title, enrichedSuccess, rateLimited, false);
       }
       onClose();
     } catch (err: unknown) {
@@ -388,7 +409,7 @@ export default function AddPlaceModal({
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-                  <span>{isOnline ? 'Obohacuji přes Gemini AI...' : 'Ukládám offline...'}</span>
+                  <span>{isOnline ? 'Obohacuji přes Gemini AI...' : 'Ukládám do offline fronty...'}</span>
                 </>
               ) : isOnline ? (
                 <>
@@ -397,8 +418,8 @@ export default function AddPlaceModal({
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="w-4 h-4 text-slate-950" />
-                  <span>Uložit bez enrichmentu (Offline)</span>
+                  <Clock className="w-4 h-4 text-slate-950" />
+                  <span>Uložit do offline fronty ⚡</span>
                 </>
               )}
             </button>

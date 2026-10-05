@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 
 import AddPlaceModal from '../components/AddPlaceModal';
+import SyncManager from '../components/SyncManager';
 import { generateAIPlaceAction } from './actions/generatePlace';
 
 /**
@@ -1129,8 +1130,13 @@ export default function TravelDiscoveryPage() {
         isOpen={showCustomTipModal}
         onClose={() => setShowCustomTipModal(false)}
         defaultCity={selectedCity}
-        onSuccess={(title, isEnriched, rateLimitWarning) => {
-          if (rateLimitWarning) {
+        onSuccess={(title, isEnriched, rateLimitWarning, offlineQueued) => {
+          if (offlineQueued) {
+            setNotification({
+              message: `⚡ Jste offline. Tip "${title}" byl uložen lokálně a obohatí se přes AI po připojení k síti.`,
+              type: 'info',
+            });
+          } else if (rateLimitWarning) {
             setNotification({
               message: '⚠️ Překročen limit AI generování (max 5/10 min). Zkuste to prosím za chvíli.',
               type: 'error',
@@ -1144,6 +1150,11 @@ export default function TravelDiscoveryPage() {
             });
           }
         }}
+      />
+
+      {/* SYNC MANAGER — naslouchá na event 'online' a synchronizuje offline frontu */}
+      <SyncManager
+        onNotification={(message, type) => setNotification({ message, type })}
       />
     </div>
   );
