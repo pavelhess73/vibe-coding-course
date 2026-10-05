@@ -38,7 +38,13 @@ import {
   RotateCcw,
   List,
   Map as MapIcon,
+  PlusCircle,
+  Wifi,
+  WifiOff,
+  LogOut,
 } from 'lucide-react';
+
+import AddPlaceModal from '../components/AddPlaceModal';
 
 /**
  * 1. ZOD SCHÉMA: PlaceSchema
@@ -151,8 +157,25 @@ export default function TravelDiscoveryPage() {
   const [generating, setGenerating] = useState<boolean>(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showAIModal, setShowAIModal] = useState<boolean>(false);
+  const [showCustomTipModal, setShowCustomTipModal] = useState<boolean>(false);
+  const [isOnline, setIsOnline] = useState<boolean>(true);
   const [customCategoryInput, setCustomCategoryInput] = useState<string>('');
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
+
+  // Sledování stavu připojení k internetu (Online / Offline)
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   /**
    * Zabezpečené načítání z Firebase Firestore:
@@ -451,11 +474,24 @@ export default function TravelDiscoveryPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 relative z-10 space-y-8">
           {/* Header Title Section */}
           <div className="flex flex-col items-center text-center space-y-5">
-            {/* Top Live Pill */}
-            <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs sm:text-sm font-semibold shadow-lg shadow-amber-500/10 backdrop-blur-md">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Zod Validace & Pokročilé Filtrování</span>
+            {/* Top Live Pill & Logout */}
+            <div className="flex items-center gap-3 flex-wrap justify-center">
+              <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs sm:text-sm font-semibold shadow-lg shadow-amber-500/10 backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>Zod Validace & Protektovaná Aplikace</span>
+              </div>
+              <button
+                onClick={async () => {
+                  await fetch('/api/logout', { method: 'POST' });
+                  window.location.href = '/login';
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-rose-400 border border-slate-700/60 text-xs font-semibold transition-colors cursor-pointer shadow-md"
+                title="Odhlásit se z aplikace"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Odhlásit</span>
+              </button>
             </div>
 
             {/* Main Title */}
@@ -468,6 +504,26 @@ export default function TravelDiscoveryPage() {
             <p className="text-slate-300 text-base sm:text-lg max-w-2xl font-light leading-relaxed">
               Objevujte nejkrásnější chrámy, přírodu, kavárny a street food v jihovýchodní Asii. S bezpečnou Zod validací a pokročilým vyhledáváním v reálném čase.
             </p>
+
+            {/* HLAVNÍ AKČNÍ TLAČÍTKO V HLAVIČCE: Přidat vlastní tip */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <button
+                onClick={() => setShowCustomTipModal(true)}
+                className="inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 font-extrabold text-base hover:brightness-110 active:scale-95 transition-all duration-200 shadow-xl shadow-amber-500/25 cursor-pointer relative group"
+              >
+                <PlusCircle className="w-5 h-5 text-slate-950" />
+                <span>➕ Přidat vlastní tip</span>
+                {!isOnline ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold bg-slate-950/20 text-slate-950 px-2 py-0.5 rounded-md border border-slate-950/30">
+                    <WifiOff className="w-3.5 h-3.5" /> Offline
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold bg-slate-950/20 text-slate-950 px-2 py-0.5 rounded-md border border-slate-950/30">
+                    <Sparkles className="w-3.5 h-3.5" /> AI Enrichment
+                  </span>
+                )}
+              </button>
+            </div>
 
             {/* Stats Bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-2 w-full max-w-3xl">
@@ -795,22 +851,30 @@ export default function TravelDiscoveryPage() {
               </div>
             </div>
 
-            {/* TLAČÍTKO 'Přidat nové AI doporučení' */}
-            <div className="flex items-center gap-3 w-full lg:w-auto">
+            {/* TLAČÍTKA AKCÍ V SEZNAMU MĚST */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+              <button
+                onClick={() => setShowCustomTipModal(true)}
+                className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 font-extrabold text-sm sm:text-base hover:brightness-110 active:scale-95 transition-all duration-200 shadow-xl shadow-amber-500/20 cursor-pointer"
+              >
+                <PlusCircle className="w-5 h-5 text-slate-950" />
+                <span>➕ Přidat vlastní tip</span>
+              </button>
+
               <button
                 onClick={() => setShowAIModal(true)}
                 disabled={generating}
-                className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-slate-950 font-bold text-sm sm:text-base hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-xl shadow-amber-500/20 cursor-pointer"
+                className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl bg-slate-900 border border-amber-500/40 text-amber-300 font-bold text-sm sm:text-base hover:bg-amber-500/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-xl shadow-amber-500/10 cursor-pointer"
               >
                 {generating ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin text-slate-950" />
+                    <Loader2 className="w-5 h-5 animate-spin text-amber-400" />
                     <span>Generuji s Gemini AI...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-5 h-5 text-slate-950" />
-                    <span>Přidat nové AI doporučení</span>
+                    <Sparkles className="w-5 h-5 text-amber-400" />
+                    <span>Generovat náhodný tip AI</span>
                   </>
                 )}
               </button>
@@ -1061,6 +1125,21 @@ export default function TravelDiscoveryPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL PRO ZADÁNÍ VLASTNÍHO TIPU Z CEST S AI ENRICHMENTEM */}
+      <AddPlaceModal
+        isOpen={showCustomTipModal}
+        onClose={() => setShowCustomTipModal(false)}
+        defaultCity={selectedCity}
+        onSuccess={(title, isEnriched) => {
+          setNotification({
+            message: isEnriched
+              ? `✨ Váš tip "${title}" byl úspěšně obohacen přes Gemini AI a uložen do Firestore!`
+              : `📱 Váš tip "${title}" byl uložen v offline režimu (bez AI enrichmentu) do Firestore.`,
+            type: 'success',
+          });
+        }}
+      />
     </div>
   );
 }
