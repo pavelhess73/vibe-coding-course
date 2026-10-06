@@ -18,6 +18,7 @@ export interface Place {
   lat?: number;
   lng?: number;
   createdAt?: string;
+  imageUrl?: string;
 }
 
 export interface EnrichmentResult {
@@ -42,8 +43,13 @@ const singlePlaceSchema: Schema = {
     priceCZK: { type: Type.INTEGER, description: 'Orientační cena v Kč.' },
     lat: { type: Type.NUMBER, description: 'Zeměpisná šířka.' },
     lng: { type: Type.NUMBER, description: 'Zeměpisná délka.' },
+    imageQuery: {
+      type: Type.STRING,
+      description:
+        'Short English keywords for an Unsplash photo search representing this specific place or dish (e.g. "luang prabang temple monk", "bangkok street food pad thai", "hanoi pho noodles"). 3-5 words, lowercase, no commas.',
+    },
   },
-  required: ['title', 'category', 'description', 'recommendedTimeOfDay', 'city', 'spicinessLevel', 'lat', 'lng'],
+  required: ['title', 'category', 'description', 'recommendedTimeOfDay', 'city', 'spicinessLevel', 'lat', 'lng', 'imageQuery'],
 };
 
 const singleEnrichmentSchema: Schema = {
@@ -147,6 +153,18 @@ export async function generateAIPlaceAction(params?: { city?: string; category?:
         const cleanedText = responseText.replace(/```json|```/g, '').trim();
         const parsed = JSON.parse(cleanedText) as Record<string, unknown>;
 
+        // Build Unsplash image URL from AI-generated keywords
+        const rawImageQuery = String(parsed.imageQuery || `${city} travel`).trim();
+        const encodedQuery = encodeURIComponent(rawImageQuery);
+        const imageUrl = `https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=800&q=80&usq=${encodedQuery}`;
+        // We use a known Unsplash photo as base but carry the query as metadata;
+        // for dynamic results we build a source.unsplash-style URL via the featured endpoint:
+        const dynamicImageUrl = `https://images.unsplash.com/search/photos?query=${encodedQuery}&per_page=1`;
+        // Use the Unsplash source CDN URL for direct embedding (no API key needed)
+        const finalImageUrl = `https://source.unsplash.com/800x600/?${encodedQuery}`;
+
+        void imageUrl; void dynamicImageUrl; // suppress unused var warnings
+
         generatedPlace = {
           title: String(parsed.title || `Zážitek v ${city}`),
           category: String(parsed.category || category || 'Kultura'),
@@ -157,6 +175,7 @@ export async function generateAIPlaceAction(params?: { city?: string; category?:
           priceCZK: typeof parsed.priceCZK === 'number' ? Math.max(0, parsed.priceCZK) : undefined,
           lat: typeof parsed.lat === 'number' ? parsed.lat : undefined,
           lng: typeof parsed.lng === 'number' ? parsed.lng : undefined,
+          imageUrl: finalImageUrl,
         };
         usedModel = modelCandidate;
         break;
@@ -173,7 +192,7 @@ export async function generateAIPlaceAction(params?: { city?: string; category?:
     throw lastError || new Error('Žádný AI model nedokázal vygenerovat výsledek.');
   }
 
-  // Uložení do Firestore
+  // Uložení do Firestore (včetně imageUrl)
   const placesRef = collection(db, 'places');
   const docRef = await addDoc(placesRef, {
     ...generatedPlace,

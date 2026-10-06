@@ -11,28 +11,18 @@ import {
   Compass,
   MapPin,
   Sparkles,
-  Clock,
-  Tag,
   Loader2,
   CheckCircle2,
   Search,
   Bot,
   Database,
-  Flame,
-  Sun,
-  Sunrise,
-  Sunset,
-  Moon,
   Zap,
   X,
-  Copy,
-  Check,
   Trees,
   UtensilsCrossed,
   Coffee,
   Landmark,
   ShieldCheck,
-  Banknote,
   SlidersHorizontal,
   Filter,
   RotateCcw,
@@ -43,10 +33,12 @@ import {
   WifiOff,
   LogOut,
   Heart,
+  Flame,
 } from 'lucide-react';
 
 import AddPlaceModal from '../components/AddPlaceModal';
 import SyncManager from '../components/SyncManager';
+import PlaceCard from '../components/PlaceCard';
 import { generateAIPlaceAction } from './actions/generatePlace';
 
 /**
@@ -78,6 +70,7 @@ export const PlaceSchema = z.object({
   lng: z.number().optional(),
   createdAt: z.string().optional(),
   isFavorite: z.boolean().optional().default(false),
+  imageUrl: z.string().url().optional(),
 });
 
 export type Place = z.infer<typeof PlaceSchema>;
@@ -425,77 +418,6 @@ export default function TravelDiscoveryPage() {
         return next;
       });
     }
-  };
-
-  const getTimeBadge = (timeOfDay: string) => {
-    const lower = timeOfDay.toLowerCase();
-    let icon = <Clock className="w-3.5 h-3.5 text-slate-400" />;
-    let color = 'bg-slate-800/80 text-slate-300 border-slate-700/60';
-
-    if (lower.includes('brzy') || lower.includes('ráno')) {
-      icon = <Sunrise className="w-3.5 h-3.5 text-amber-400" />;
-      color = 'bg-amber-950/40 text-amber-300 border-amber-500/30';
-    } else if (lower.includes('dopoledne') || lower.includes('odpoledne')) {
-      icon = <Sun className="w-3.5 h-3.5 text-orange-400" />;
-      color = 'bg-orange-950/40 text-orange-300 border-orange-500/30';
-    } else if (lower.includes('podvečer')) {
-      icon = <Sunset className="w-3.5 h-3.5 text-rose-400" />;
-      color = 'bg-rose-950/40 text-rose-300 border-rose-500/30';
-    } else if (lower.includes('večer') || lower.includes('noc')) {
-      icon = <Moon className="w-3.5 h-3.5 text-indigo-400" />;
-      color = 'bg-indigo-950/40 text-indigo-300 border-indigo-500/30';
-    }
-
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${color}`}>
-        {icon}
-        <span>{timeOfDay}</span>
-      </span>
-    );
-  };
-
-  const getCategoryBadgeClass = (category: string) => {
-    const lower = category.toLowerCase();
-    if (lower.includes('příroda') || lower.includes('vodopád') || lower.includes('priroda'))
-      return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 shadow-emerald-500/10';
-    if (lower.includes('kavárn') || lower.includes('kavarn') || lower.includes('cafe') || lower.includes('káva'))
-      return 'bg-amber-500/15 text-amber-300 border-amber-500/30 shadow-amber-500/10';
-    if (lower.includes('kultura') || lower.includes('chrám') || lower.includes('památk') || lower.includes('chram'))
-      return 'bg-purple-500/15 text-purple-300 border-purple-500/30 shadow-purple-500/10';
-    if (lower.includes('street food') || lower.includes('gastro') || lower.includes('jídlo') || lower.includes('trh'))
-      return 'bg-orange-500/15 text-orange-300 border-orange-500/30 shadow-orange-500/10';
-    return 'bg-slate-700/50 text-slate-300 border-slate-600/50';
-  };
-
-  const getSpicinessBadge = (level: number = 1) => {
-    const safeLvl = Math.max(1, Math.min(5, level));
-    const chilis = '🌶️'.repeat(safeLvl);
-    const labels: Record<number, string> = {
-      1: 'Nepálivé / Jemné',
-      2: 'Mírně pálivé',
-      3: 'Středně pálivé',
-      4: 'Velmi pálivé',
-      5: 'Extra pálivé 🔥',
-    };
-    const colorClasses: Record<number, string> = {
-      1: 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30',
-      2: 'bg-yellow-950/40 text-yellow-300 border-yellow-500/30',
-      3: 'bg-orange-950/40 text-orange-300 border-orange-500/30',
-      4: 'bg-red-950/50 text-red-300 border-red-500/40',
-      5: 'bg-rose-950/60 text-rose-200 border-rose-500/60 shadow-lg shadow-rose-950/50',
-    };
-
-    return (
-      <span
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${colorClasses[safeLvl] || colorClasses[1]
-          }`}
-        title={`Úroveň pálivosti: ${safeLvl}/5 (${labels[safeLvl]})`}
-      >
-        <Flame className="w-3.5 h-3.5 text-rose-400" />
-        <span>{chilis}</span>
-        <span className="opacity-90 font-medium text-[11px]">{labels[safeLvl]}</span>
-      </span>
-    );
   };
 
   const activeCityInfo = CITIES.find((c) => c.id === selectedCity) || {
@@ -1067,101 +989,17 @@ export default function TravelDiscoveryPage() {
               <MapView places={filteredPlaces} city={selectedCity} />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPlaces.map((place) => (
-                <article
-                  key={place.id || place.title}
-                  className="glass-card p-6 rounded-2xl flex flex-col justify-between relative group overflow-hidden"
-                >
-                  {/* Glowing Top Border Accent */}
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                  <div className="space-y-4">
-                    {/* Header + Badge + Favorite Button */}
-                    <div className="flex items-start justify-between gap-3">
-                      <h2 className="text-xl font-bold text-white group-hover:text-amber-300 transition-colors duration-200 line-clamp-2 leading-snug flex-1">
-                        {place.title}
-                      </h2>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {/* Tlačítko oblíbených s optimistickým UI */}
-                        {place.id && (
-                          <button
-                            id={`favorite-btn-${place.id}`}
-                            onClick={() => handleToggleFavorite(place)}
-                            disabled={favoriteUpdating.has(place.id)}
-                            title={place.isFavorite ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
-                            className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-wait ${
-                              place.isFavorite
-                                ? 'text-rose-400 bg-rose-500/15 border border-rose-500/40 hover:bg-rose-500/25 shadow-sm shadow-rose-500/20'
-                                : 'text-slate-500 bg-slate-900/60 border border-slate-800 hover:text-rose-400 hover:bg-rose-950/30 hover:border-rose-500/40'
-                            }`}
-                          >
-                            <Heart
-                              className={`w-4 h-4 transition-all duration-200 ${
-                                favoriteUpdating.has(place.id!) ? 'animate-pulse' : ''
-                              } ${
-                                place.isFavorite ? 'fill-rose-400 text-rose-400' : ''
-                              }`}
-                            />
-                          </button>
-                        )}
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border shrink-0 shadow-sm ${getCategoryBadgeClass(
-                            place.category
-                          )}`}
-                        >
-                          <Tag className="w-3 h-3" />
-                          {place.category}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <p className="text-slate-300 text-sm leading-relaxed line-clamp-4 font-normal">
-                      {place.description}
-                    </p>
-
-                    {/* Parametry místa: Pálivost + Cena */}
-                    <div className="flex flex-wrap items-center gap-2 pt-2">
-                      {/* Pálivostní štítek */}
-                      {getSpicinessBadge(place.spicinessLevel)}
-
-                      {/* Orientační cena (pokud existuje) */}
-                      {place.priceCZK !== undefined && (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border bg-emerald-950/40 text-emerald-300 border-emerald-500/30">
-                          <Banknote className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>{place.priceCZK > 0 ? `${place.priceCZK} Kč` : 'Zdarma'}</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Card Footer: Time Badge & Document ID */}
-                  <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                    {getTimeBadge(place.recommendedTimeOfDay)}
-
-                    {place.id && (
-                      <button
-                        onClick={() => copyToClipboard(place.id!)}
-                        title="Kopírovat Firestore ID"
-                        className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-300 transition-colors px-2 py-1 rounded bg-slate-900/60 border border-slate-800 cursor-pointer"
-                      >
-                        {copiedId === place.id ? (
-                          <>
-                            <Check className="w-3 h-3 text-emerald-400" />
-                            <span className="text-emerald-400">Zkopírováno</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3 h-3 text-slate-500" />
-                            <span>ID: {place.id.slice(0, 6)}...</span>
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </div>
+                {filteredPlaces.map((place) => (
+                  <PlaceCard
+                    key={place.id || place.title}
+                    place={place}
+                    copiedId={copiedId}
+                    onCopy={copyToClipboard}
+                    isFavoriteUpdating={favoriteUpdating.has(place.id ?? '')}
+                    onToggleFavorite={handleToggleFavorite}
+                  />
+                ))}
+              </div>
             )}
           </section>
         )}
