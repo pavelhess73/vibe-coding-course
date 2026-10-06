@@ -22,6 +22,7 @@ import {
   UtensilsCrossed,
   Coffee,
   Landmark,
+  Beer,
   ShieldCheck,
   SlidersHorizontal,
   Filter,
@@ -45,10 +46,14 @@ import { generateAIPlaceAction } from './actions/generatePlace';
  * 1. ZOD SCHÉMA: PlaceSchema
  * Validuje data načtená z databáze Firestore i vstupy z AI generování.
  */
+export const CategorySchema = z
+  .enum(['Příroda', 'Kavárny', 'Kultura', 'Street Food', 'Kraftová Piva'])
+  .or(z.string().min(1, { message: 'Kategorie je povinná' }));
+
 export const PlaceSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(2, { message: 'Název místa musí obsahovat alespoň 2 znaky' }),
-  category: z.string().min(1, { message: 'Kategorie je povinná' }),
+  category: CategorySchema,
   description: z.string().min(1, { message: 'Popis místa je povinný' }),
   recommendedTimeOfDay: z.string().min(1, { message: 'Doporučená doba je povinná' }),
   city: z.string().min(1, { message: 'Město je povinné' }),
@@ -128,6 +133,7 @@ const CATEGORIES = [
   { id: 'Kavárny', label: 'Kavárny', icon: Coffee },
   { id: 'Kultura', label: 'Kultura', icon: Landmark },
   { id: 'Street Food', label: 'Street Food', icon: UtensilsCrossed },
+  { id: 'Kraftová Piva', label: 'Kraftová Piva', icon: Beer },
 ] as const;
 
 const SPICINESS_LEVELS = [
@@ -303,6 +309,16 @@ export default function TravelDiscoveryPage() {
             cat.includes('food') ||
             cat.includes('polévka') ||
             cat.includes('restaur');
+        } else if (selectedCategory === 'Kraftová Piva') {
+          matchesCategory =
+            cat.includes('kraft') ||
+            cat.includes('craft') ||
+            cat.includes('piv') ||
+            cat.includes('beer') ||
+            cat.includes('brew') ||
+            cat.includes('taproom') ||
+            cat.includes('ipa') ||
+            cat.includes('ale');
         } else {
           matchesCategory = cat.includes(selectedCategory.toLowerCase());
         }
@@ -1033,8 +1049,8 @@ export default function TravelDiscoveryPage() {
               <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
                 Zvolte požadovanou kategorii:
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                {['Street Food', 'Kavárny', 'Příroda', 'Kultura'].map((cat) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {['Street Food', 'Kavárny', 'Příroda', 'Kultura', 'Kraftová Piva'].map((cat) => (
                   <button
                     key={cat}
                     onClick={() => handleAddAIPlace(cat)}

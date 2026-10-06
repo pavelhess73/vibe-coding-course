@@ -14,6 +14,7 @@ import {
   Check,
   Heart,
   ImageOff,
+  Beer,
 } from 'lucide-react';
 import type { Place } from '../app/page';
 
@@ -48,6 +49,14 @@ function getTimeBadge(timeOfDay: string) {
 
 function getCategoryBadgeClass(category: string) {
   const lower = category.toLowerCase();
+  if (
+    lower.includes('kraft') ||
+    lower.includes('craft') ||
+    lower.includes('piv') ||
+    lower.includes('beer') ||
+    lower.includes('brew')
+  )
+    return 'bg-amber-400/20 text-amber-200 border-amber-400/60 shadow-amber-400/20 shadow-sm';
   if (lower.includes('příroda') || lower.includes('vodopád') || lower.includes('priroda'))
     return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 shadow-emerald-500/10';
   if (lower.includes('kavárn') || lower.includes('kavarn') || lower.includes('cafe') || lower.includes('káva'))
@@ -92,6 +101,9 @@ function getSpicinessBadge(level: number = 1) {
 // ─── Fallback images by category ────────────────────────────────────────────
 
 const CATEGORY_FALLBACKS: Record<string, string> = {
+  'kraftová piva': 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=800&q=70',
+  pivo: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=800&q=70',
+  beer: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=800&q=70',
   příroda: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=800&q=70',
   kavárny: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=70',
   kultura: 'https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=800&q=70',
@@ -217,7 +229,14 @@ export default function PlaceCard({
                 place.category
               )}`}
             >
-              <Tag className="w-3 h-3" />
+              {place.category.toLowerCase().includes('piv') ||
+              place.category.toLowerCase().includes('kraft') ||
+              place.category.toLowerCase().includes('craft') ||
+              place.category.toLowerCase().includes('beer') ? (
+                <Beer className="w-3 h-3 text-amber-300" />
+              ) : (
+                <Tag className="w-3 h-3" />
+              )}
               {place.category}
             </span>
           </div>

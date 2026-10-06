@@ -35,7 +35,7 @@ const singlePlaceSchema: Schema = {
   description: 'Detailní strukturované informace o novém místě nebo aktivitě.',
   properties: {
     title: { type: Type.STRING, description: 'Název aktivity nebo místa.' },
-    category: { type: Type.STRING, description: 'Kategorie (Příroda, Kavárny, Kultura, Street Food).' },
+    category: { type: Type.STRING, description: 'Kategorie (Příroda, Kavárny, Kultura, Street Food, Kraftová Piva).' },
     description: { type: Type.STRING, description: 'Poutavý popis v češtině (2-3 věty).' },
     recommendedTimeOfDay: { type: Type.STRING, description: 'Doporučená doba návštěvy.' },
     city: { type: Type.STRING, description: 'Město, ve kterém se místo nachází.' },
@@ -56,7 +56,7 @@ const singleEnrichmentSchema: Schema = {
   type: Type.OBJECT,
   description: 'Strukturované obohacení pro uživatelský tip.',
   properties: {
-    category: { type: Type.STRING, description: 'Kategorie místa.' },
+    category: { type: Type.STRING, description: 'Kategorie místa (Příroda, Kavárny, Kultura, Street Food, Kraftová Piva).' },
     description: { type: Type.STRING, description: 'Poutavý popis v češtině.' },
     recommendedTimeOfDay: { type: Type.STRING, description: 'Doporučená doba návštěvy.' },
     spicinessLevel: { type: Type.INTEGER, description: 'Úroveň pálivosti 1-5.' },
@@ -118,12 +118,35 @@ export async function generateAIPlaceAction(params?: { city?: string; category?:
 
   const ai = new GoogleGenAI({ apiKey });
 
+  const isCraftBeer =
+    category === 'Kraftová Piva' ||
+    category.toLowerCase().includes('piv') ||
+    category.toLowerCase().includes('craft') ||
+    category.toLowerCase().includes('beer');
+
   const categoryPrompt = category
     ? `spadající do kategorie '${category}'`
-    : 's novou a zajímavou kategorií (např. Gastronomie, Trhy, Vyhlídky, Relaxace, Řeky)';
+    : 's novou a zajímavou kategorií (např. Gastronomie, Trhy, Vyhlídky, Relaxace, Kraftová Piva, Řeky)';
+
+  let craftBeerInstructions = '';
+  if (isCraftBeer) {
+    craftBeerInstructions =
+      ` PRO KATEGORII 'Kraftová Piva': Doporuč unikátní lokální kraftový pivovar, taproom nebo mikropivovar v daném městě '${city}' ` +
+      `(např. Pasteur Street Brewing Co. nebo Heart of Darkness v Saigonu / Ho Chi Minh City; ` +
+      `Furbrew, Standing Bar nebo Turtle Lake Brewing v Hanoji; ` +
+      `Mikkeller Bangkok, Hair of the Dog nebo Chit Hole v Bangkoku; ` +
+      `případně lokální řemeslné pivo / microbrewery v Luang Prabang). ` +
+      `Doporučení v popisu (description) MUSÍ výslovně obsahovat: ` +
+      `1. Konkrétní název pivovaru / podniku, ` +
+      `2. Konkrétní styl a název piva (např. Jasmine IPA, Dragonfruit Gose, Imperial Chocolate Stout, Lemongrass Wheat Ale apod.), ` +
+      `3. Atmosféru podniku a vibe prostoru (např. střešní terasa, industriální interiér, živá hudba, útulný taproom). ` +
+      `Pole category MUSÍ mít hodnotu 'Kraftová Piva'. ` +
+      `Pole imageQuery musí obsahovat anglická klíčová slova pro Unsplash (např. 'craft beer taproom brewery bar ${city.toLowerCase()}').`;
+  }
 
   const prompt =
     `Vygeneruj jedno originální a atraktivní místo nebo aktivitu pro cestovatele ve městě '${city}' ${categoryPrompt}. ` +
+    (craftBeerInstructions ? `${craftBeerInstructions} ` : '') +
     `Ujisti se, že město v odpovědi je přesně '${city}'. ` +
     `Výstup musí přesně odpovídat definovanému JSON schématu bez jakéhokoliv dalšího textu.`;
 
@@ -153,10 +176,11 @@ export async function generateAIPlaceAction(params?: { city?: string; category?:
         const cleanedText = responseText.replace(/```json|```/g, '').trim();
         const parsed = JSON.parse(cleanedText) as Record<string, unknown>;
 
-        // Build Unsplash image URL from AI-generated keywords
-        const rawImageQuery = String(parsed.imageQuery || `${city} travel`).trim();
+        const rawImageQuery = String(
+          parsed.imageQuery || (isCraftBeer ? `craft beer taproom ${city}` : `${city} travel`)
+        ).trim();
         const encodedQuery = encodeURIComponent(rawImageQuery);
-        const imageUrl = `https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=800&q=80&usq=${encodedQuery}`;
+        const imageUrl = `https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=800&q=80&usq=${encodedQuery}`;
         // We use a known Unsplash photo as base but carry the query as metadata;
         // for dynamic results we build a source.unsplash-style URL via the featured endpoint:
         const dynamicImageUrl = `https://images.unsplash.com/search/photos?query=${encodedQuery}&per_page=1`;
@@ -167,7 +191,7 @@ export async function generateAIPlaceAction(params?: { city?: string; category?:
 
         generatedPlace = {
           title: String(parsed.title || `Zážitek v ${city}`),
-          category: String(parsed.category || category || 'Kultura'),
+          category: isCraftBeer ? 'Kraftová Piva' : String(parsed.category || category || 'Kultura'),
           description: String(parsed.description || ''),
           recommendedTimeOfDay: String(parsed.recommendedTimeOfDay || 'Dopoledne'),
           city: String(parsed.city || city),
@@ -238,7 +262,7 @@ export async function enrichCustomPlaceAction(params: { title: string; city: str
     `- Název místa: "${title}"\n` +
     `- Poznámka/dojem: "${rawNote}"\n\n` +
     `Na základě těchto údajů vytvoř strukturované obohacení (enrichment) pro toto místo:\n` +
-    `1. Vyber vhodnou kategorii ('Street Food', 'Kultura', 'Kavárny', 'Příroda' atd.).\n` +
+    `1. Vyber vhodnou kategorii ('Street Food', 'Kultura', 'Kavárny', 'Příroda', 'Kraftová Piva' atd.).\n` +
     `2. Vytvoř chytlavý a poutavý popis v češtině (2-3 věty).\n` +
     `3. Urči vhodnou dobu návštěvy (např. 'Brzy ráno', 'Odpoledne', 'Večer').\n` +
     `4. Urči úroveň pálivosti 1-5 (1 pokud nejde o pálivé jídlo).\n` +
