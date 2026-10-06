@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { z } from 'zod';
 import { db } from '../lib/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 
 const MapView = dynamic(() => import('../components/MapView'), { ssr: false });
 import {
@@ -42,6 +42,7 @@ import {
   Wifi,
   WifiOff,
   LogOut,
+  Heart,
 } from 'lucide-react';
 
 import AddPlaceModal from '../components/AddPlaceModal';
@@ -76,6 +77,7 @@ export const PlaceSchema = z.object({
   lat: z.number().optional(),
   lng: z.number().optional(),
   createdAt: z.string().optional(),
+  isFavorite: z.boolean().optional().default(false),
 });
 
 export type Place = z.infer<typeof PlaceSchema>;
@@ -151,6 +153,7 @@ export default function TravelDiscoveryPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSpiciness, setSelectedSpiciness] = useState<'all' | number>('all');
   const [spicinessFilterMode, setSpicinessFilterMode] = useState<'exact' | 'max'>('exact');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   // Data a UI stavy
@@ -163,6 +166,8 @@ export default function TravelDiscoveryPage() {
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [customCategoryInput, setCustomCategoryInput] = useState<string>('');
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
+  // Sada ID karet, kde probíhá optimistická aktualizace oblíbených
+  const [favoriteUpdating, setFavoriteUpdating] = useState<Set<string>>(new Set());
 
   // Sledování stavu připojení k internetu (Online / Offline)
   useEffect(() => {
@@ -324,9 +329,12 @@ export default function TravelDiscoveryPage() {
         }
       }
 
-      return matchesSearch && matchesCategory && matchesSpiciness;
+      // 4. Filtr oblíbených
+      const matchesFavorite = !showFavoritesOnly || place.isFavorite === true;
+
+      return matchesSearch && matchesCategory && matchesSpiciness && matchesFavorite;
     });
-  }, [places, searchQuery, selectedCategory, selectedSpiciness, spicinessFilterMode]);
+  }, [places, searchQuery, selectedCategory, selectedSpiciness, spicinessFilterMode, showFavoritesOnly]);
 
   // Vygenerování nového AI doporučení přes Server Action generateAIPlaceAction
   const handleAddAIPlace = async (requestedCategory?: string) => {
@@ -376,6 +384,47 @@ export default function TravelDiscoveryPage() {
     setSelectedCategory('all');
     setSelectedSpiciness('all');
     setSpicinessFilterMode('exact');
+    setShowFavoritesOnly(false);
+  };
+
+  /**
+   * Optimistická aktualizace oblíbených:
+   * 1. Okamžitě přepne isFavorite v lokálním stavu (optimistic UI)
+   * 2. Na pozadí aktualizuje dokument ve Firestore
+   * 3. Při chybě vrátí stav zpět a zobrazí upozornění
+   */
+  const handleToggleFavorite = async (place: Place) => {
+    if (!place.id) return;
+    const placeId = place.id;
+    const newFavoriteState = !place.isFavorite;
+
+    // 1. Optimistická aktualizace UI
+    setPlaces((prev) =>
+      prev.map((p) => (p.id === placeId ? { ...p, isFavorite: newFavoriteState } : p))
+    );
+    setFavoriteUpdating((prev) => new Set(prev).add(placeId));
+
+    try {
+      // 2. Aktualizace ve Firestore na pozadí
+      const placeRef = doc(db, 'places', placeId);
+      await updateDoc(placeRef, { isFavorite: newFavoriteState });
+    } catch (err: unknown) {
+      // 3. Rollback UI při chybě
+      setPlaces((prev) =>
+        prev.map((p) => (p.id === placeId ? { ...p, isFavorite: !newFavoriteState } : p))
+      );
+      const errMsg = err instanceof Error ? err.message : 'Neznámá chyba';
+      setNotification({
+        message: `❌ Nepodařilo se uložit oblíbené: ${errMsg}`,
+        type: 'error',
+      });
+    } finally {
+      setFavoriteUpdating((prev) => {
+        const next = new Set(prev);
+        next.delete(placeId);
+        return next;
+      });
+    }
   };
 
   const getTimeBadge = (timeOfDay: string) => {
@@ -457,7 +506,8 @@ export default function TravelDiscoveryPage() {
     tagline: 'Vlastní destinace objevená přes AI',
   };
   const isAnyFilterActive =
-    searchQuery.trim() !== '' || selectedCategory !== 'all' || selectedSpiciness !== 'all';
+    searchQuery.trim() !== '' || selectedCategory !== 'all' || selectedSpiciness !== 'all' || showFavoritesOnly;
+  const favoritesCount = places.filter((p) => p.isFavorite).length;
 
   return (
     <div className="min-h-screen pb-20 relative">
@@ -671,6 +721,35 @@ export default function TravelDiscoveryPage() {
                     </button>
                   );
                 })}
+
+                {/* Pill: Oblíbená místa */}
+                <button
+                  id="favorites-filter-pill"
+                  onClick={() => setShowFavoritesOnly((v) => !v)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border cursor-pointer ${
+                    showFavoritesOnly
+                      ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white border-rose-400 shadow-lg shadow-rose-500/30 scale-[1.02]'
+                      : 'bg-slate-900/80 text-slate-300 border-slate-800 hover:border-rose-500/50 hover:bg-rose-950/30 hover:text-rose-300'
+                  }`}
+                >
+                  <Heart
+                    className={`w-4 h-4 transition-all ${
+                      showFavoritesOnly ? 'text-white fill-white' : 'text-rose-400'
+                    }`}
+                  />
+                  <span>❤️ Oblíbená</span>
+                  {favoritesCount > 0 && (
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                        showFavoritesOnly
+                          ? 'bg-white/25 text-white'
+                          : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                      }`}
+                    >
+                      {favoritesCount}
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
 
@@ -997,19 +1076,43 @@ export default function TravelDiscoveryPage() {
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                   <div className="space-y-4">
-                    {/* Header + Badge */}
+                    {/* Header + Badge + Favorite Button */}
                     <div className="flex items-start justify-between gap-3">
-                      <h2 className="text-xl font-bold text-white group-hover:text-amber-300 transition-colors duration-200 line-clamp-2 leading-snug">
+                      <h2 className="text-xl font-bold text-white group-hover:text-amber-300 transition-colors duration-200 line-clamp-2 leading-snug flex-1">
                         {place.title}
                       </h2>
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border shrink-0 shadow-sm ${getCategoryBadgeClass(
-                          place.category
-                        )}`}
-                      >
-                        <Tag className="w-3 h-3" />
-                        {place.category}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Tlačítko oblíbených s optimistickým UI */}
+                        {place.id && (
+                          <button
+                            id={`favorite-btn-${place.id}`}
+                            onClick={() => handleToggleFavorite(place)}
+                            disabled={favoriteUpdating.has(place.id)}
+                            title={place.isFavorite ? 'Odebrat z oblíbených' : 'Přidat do oblíbených'}
+                            className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-wait ${
+                              place.isFavorite
+                                ? 'text-rose-400 bg-rose-500/15 border border-rose-500/40 hover:bg-rose-500/25 shadow-sm shadow-rose-500/20'
+                                : 'text-slate-500 bg-slate-900/60 border border-slate-800 hover:text-rose-400 hover:bg-rose-950/30 hover:border-rose-500/40'
+                            }`}
+                          >
+                            <Heart
+                              className={`w-4 h-4 transition-all duration-200 ${
+                                favoriteUpdating.has(place.id!) ? 'animate-pulse' : ''
+                              } ${
+                                place.isFavorite ? 'fill-rose-400 text-rose-400' : ''
+                              }`}
+                            />
+                          </button>
+                        )}
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border shrink-0 shadow-sm ${getCategoryBadgeClass(
+                            place.category
+                          )}`}
+                        >
+                          <Tag className="w-3 h-3" />
+                          {place.category}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Description */}
